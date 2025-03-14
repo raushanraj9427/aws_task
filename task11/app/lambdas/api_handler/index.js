@@ -133,11 +133,9 @@ async function handleSignin(event) {
       return formatResponse(400, { error: "Authentication failed. Try again." });
     }
 
-    return formatResponse(200, {
-      accessToken: authResponse.AuthenticationResult.IdToken,
-      refreshToken: authResponse.AuthenticationResult.RefreshToken,
-      expiresIn: authResponse.AuthenticationResult.ExpiresIn
-    });
+     return formatResponse(200, {
+          idToken: authResponse.AuthenticationResult.IdToken
+        });
   } catch (error) {
     // Handle incorrect credentials (Cognito does NOT differentiate between wrong passwords & non-existent users)
     if (error.code === "NotAuthorizedException") {
