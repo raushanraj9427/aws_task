@@ -116,31 +116,34 @@ async function handleSignin(event) {
   try {
     const { email, password } = JSON.parse(event.body);
 
-    // Directly initiate authentication without fetching user
     const params = {
       AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
       UserPoolId: USER_POOL_ID,
       ClientId: CLIENT_ID,
       AuthParameters: {
-        USERNAME: email, // No need to fetch username separately
+        USERNAME: email, // Assuming email is used as the username
         PASSWORD: password
       }
     };
 
     const authResponse = await cognito.adminInitiateAuth(params).promise();
 
+    // Ensure AuthenticationResult is defined
+    if (!authResponse.AuthenticationResult) {
+      return formatResponse(400, { error: "Authentication failed. Try again." });
+    }
+
     return formatResponse(200, {
-      accessToken: authResponse.AuthenticationResult?.IdToken,
-      refreshToken: authResponse.AuthenticationResult?.RefreshToken, // Optional
-      expiresIn: authResponse.AuthenticationResult?.ExpiresIn
+      accessToken: authResponse.AuthenticationResult.IdToken,
+      refreshToken: authResponse.AuthenticationResult.RefreshToken,
+      expiresIn: authResponse.AuthenticationResult.ExpiresIn
     });
   } catch (error) {
-    // Handle specific Cognito errors
+    // Handle incorrect credentials (Cognito does NOT differentiate between wrong passwords & non-existent users)
     if (error.code === "NotAuthorizedException") {
-      return formatResponse(401, { error: "Invalid email or password." });
-    } else if (error.code === "UserNotFoundException") {
-      return formatResponse(404, { error: "User does not exist." });
+      return formatResponse(400, { error: "Invalid email or password." });
     }
+
     return formatResponse(400, { error: "Authentication failed." });
   }
 }
