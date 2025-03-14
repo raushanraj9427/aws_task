@@ -112,37 +112,39 @@ async function handleSignup(event) {
   }
 }
 
-//Signin Handler
 async function handleSignin(event) {
   try {
     const { email, password } = JSON.parse(event.body);
-    const getUserParams = {
-      UserPoolId: USER_POOL_ID,
-      Filter: `email = "${email}"`,
-      Limit: 1
-    };
-    const users = await cognito.listUsers(getUserParams).promise();
-    if (!users.Users.length) {
-      return formatResponse(400, { error: "User does not exist." });
-    }
-    const username = users.Users[0].Username;
+
+    // Directly initiate authentication without fetching user
     const params = {
       AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
       UserPoolId: USER_POOL_ID,
       ClientId: CLIENT_ID,
       AuthParameters: {
-        USERNAME: username,
+        USERNAME: email, // No need to fetch username separately
         PASSWORD: password
       }
     };
+
     const authResponse = await cognito.adminInitiateAuth(params).promise();
+
     return formatResponse(200, {
-      accessToken: authResponse.AuthenticationResult?.IdToken
+      accessToken: authResponse.AuthenticationResult?.IdToken,
+      refreshToken: authResponse.AuthenticationResult?.RefreshToken, // Optional
+      expiresIn: authResponse.AuthenticationResult?.ExpiresIn
     });
   } catch (error) {
-    return formatResponse(400, { error: error.message });
+    // Handle specific Cognito errors
+    if (error.code === "NotAuthorizedException") {
+      return formatResponse(401, { error: "Invalid email or password." });
+    } else if (error.code === "UserNotFoundException") {
+      return formatResponse(404, { error: "User does not exist." });
+    }
+    return formatResponse(400, { error: "Authentication failed." });
   }
 }
+
 
 // Table View
 async function handleGetTables(event) {
